@@ -56,7 +56,10 @@ function get_issues(snapshot) {
       console.log(issue.attributes)
       console.log('------------------------------')
     })
-    if (issues.data.length > 0) process.exit(1)
+    if (issues.data.length > 0) {
+      console.error(`${issues.data.length} issues found`)
+      process.exit(1)
+    }
   })
 }
 
@@ -70,7 +73,7 @@ function get_snapshot(commit, callback) {
       if (build.attributes.commit_sha == commit) {
         found_commit = build
         if (!build.relationships.snapshot.data) {
-          console.error(`climate snapshot for ${commit} not found. not ready yet?`)
+          console.error(`Codeclimate snapshot for commit '${commit}' not found. not ready yet?`)
           process.exit(0)
         }
         debug_log(`${commit} -> ${build.relationships.snapshot.data.id}`)
@@ -78,16 +81,23 @@ function get_snapshot(commit, callback) {
       }
     })
     if (!found_commit) {
-      console.error(`climate build for ${commit} not found. not in git?`)
+      console.error(`Codeclimate build for commit '${commit}' not found. commit may not be in git?`)
+      process.exit(2)
     }
   })
 }
 
 function find_issues(repo_name, commit) {
   climate_api(repo_name,(repos)=>{
-    REPO = repos.data[0].id
-    console.log('CLIMATE REPO ID:', REPO)
-    get_snapshot(commit, get_issues)
+    if (repos.data[0]) {
+      REPO = repos.data[0].id
+      console.log('CLIMATE REPO ID:', REPO)
+      get_snapshot(commit, get_issues)
+    }
+    else {
+      console.error('Git repo not found in Codeclimate')
+      process.exit(2)
+    }
   })
 }
 
